@@ -18,7 +18,7 @@ const userSchema = new mongoose.Schema({
     },
     isVerified: {
         type: Boolean,
-        default: false,
+        default: true,
     },
     isAdmin: {
         type: Boolean,
@@ -27,8 +27,7 @@ const userSchema = new mongoose.Schema({
 
     forgetPasswordToken: String,
     forgetPasswordtokenExpiry: Date,
-    verifyToken: String,
-    verifyTokenExpiry: Date,
+  
     
 });
 

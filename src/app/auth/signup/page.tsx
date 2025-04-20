@@ -2,7 +2,7 @@ import react from 'react';
 
 function page() {
     return (
-          <div>page</div>
+          <div>sigin up page</div>
     );
 }
 
