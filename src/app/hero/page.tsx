@@ -8,7 +8,7 @@ export default function HomePage() {
       {/* Hero Section */}
       <div className="relative w-full h-[600px]">
         <Image
-          src="/images/hero1.jpg" // Replace with actual path or static asset
+          src="/images/hero2.png" // Replace with actual path or static asset
           alt="child learning"
           fill
           className="object-cover"
