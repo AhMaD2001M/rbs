@@ -6,19 +6,19 @@ const programs = [
     icon: <Calculator size={48} className="text-sky-500" />,
     title: 'Maths',
     description: 'Capitalize on low hanging fruit to identify a ballpark value added activity to beta test. Override the digital divide with additional clickthroughs from DevOps.',
-    link: '#maths'
+    link: ''
   },
   {
     icon: <Dumbbell size={48} className="text-pink-600" />,
     title: 'Sports',
     description: 'Podcasting operational change management inside of workflows to establish a framework. Taking seamless key performance indicators offline to maximise tail.',
-    link: '#sports'
+    link: 'auth/signup'
   },
   {
     icon: <Palette size={48} className="text-purple-600" />,
     title: 'Arts',
     description: 'Collaboratively administrate empowered markets via plug-and-play networks. Dynamically procrastinate B2C users after installed base benefits.',
-    link: '#arts'
+    link: '#'
   },
   {
     icon: <MonitorSmartphone size={48} className="text-blue-700" />,

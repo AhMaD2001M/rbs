@@ -1,4 +1,3 @@
-import { verify } from "crypto";
 import mongoose from "mongoose";
 
 const userSchema = new mongoose.Schema({
@@ -16,22 +15,43 @@ const userSchema = new mongoose.Schema({
         type: String,
         required: [true, "Password is required"],
     },
+    role: {
+        type: String,
+        enum: ['admin', 'teacher', 'student'],
+        required: [true, "Role is required"],
+    },
+    studentId: {
+        type: String,
+        unique: true,
+        sparse: true, // Allows null values for non-student users
+    },
     isVerified: {
         type: Boolean,
         default: true,
     },
-    isAdmin: {
-        type: Boolean,
-        default: false,
+    profile: {
+        firstName: String,
+        lastName: String,
+        phoneNumber: String,
+        emergencyContact: String,
+        address: String,
+        dateOfBirth: Date,
+        gender: String,
+        grade: String,
+        section: String,
     },
-
     forgetPasswordToken: String,
-    forgetPasswordtokenExpiry: Date,
-  
-    
+    forgetPasswordTokenExpiry: Date,
+    createdAt: {
+        type: Date,
+        default: Date.now,
+    },
+    updatedAt: {
+        type: Date,
+        default: Date.now,
+    }
 });
 
 const User = mongoose.models.users || mongoose.model("users", userSchema);
-
 
 export default User;
