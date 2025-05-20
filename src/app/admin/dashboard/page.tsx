@@ -20,6 +20,39 @@ interface DashboardStats {
   totalAssessments: number;
 }
 
+interface RecentActivity {
+  type: string;
+  message: string;
+  time: string;
+}
+
+interface Event {
+  title: string;
+  date: string;
+  type: string;
+}
+
+interface Student {
+  _id: string;
+  username: string;
+  email: string;
+}
+
+interface Class {
+  grade: string;
+  section: string;
+  name: string;
+}
+
+interface Assessment {
+  title: string;
+  date: string;
+  type: string;
+  class: {
+    name: string;
+  };
+}
+
 export default function AdminDashboard() {
   const [stats, setStats] = useState<DashboardStats>({
     totalTeachers: 0,
@@ -28,30 +61,59 @@ export default function AdminDashboard() {
     totalAssessments: 0
   });
 
-  const [recentActivities] = useState([
-    { type: 'New Teacher', message: 'Sarah Johnson joined as Mathematics teacher', time: '2 hours ago' },
-    { type: 'New Class', message: 'Class 10-A was created', time: '3 hours ago' },
-    { type: 'Assessment', message: 'Mid-term results published for Class 8', time: '5 hours ago' },
-    { type: 'Student', message: 'New student enrollment in Class 7-B', time: '1 day ago' },
-  ]);
-
-  const [upcomingEvents] = useState([
-    { title: 'Parent-Teacher Meeting', date: '2024-03-25', type: 'meeting' },
-    { title: 'Annual Sports Day', date: '2024-03-28', type: 'event' },
-    { title: 'Science Exhibition', date: '2024-04-02', type: 'exhibition' },
-  ]);
+  const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([]);
+  const [upcomingEvents, setUpcomingEvents] = useState<Event[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchStats = async () => {
+    const fetchDashboardData = async () => {
       try {
-        const response = await axios.get('/api/admin/stats');
-        setStats(response.data);
+        setLoading(true);
+        
+        // Fetch stats
+        const statsResponse = await axios.get('/api/admin/stats');
+        setStats(statsResponse.data);
+
+        // Fetch classes and assessments
+        const [classesResponse, assessmentsResponse] = await Promise.all([
+          axios.get<Class[]>('/api/admin/classes'),
+          axios.get<Assessment[]>('/api/admin/assessments')
+        ]);
+
+        // Generate recent activities based on real data
+        const activities: RecentActivity[] = [
+          ...classesResponse.data.slice(0, 2).map(cls => ({
+            type: 'New Class',
+            message: `Class ${cls.grade}-${cls.section} was created`,
+            time: 'recently'
+          })),
+          ...assessmentsResponse.data.slice(0, 2).map(assessment => ({
+            type: 'Assessment',
+            message: `${assessment.title} scheduled for ${assessment.class.name}`,
+            time: new Date(assessment.date).toLocaleDateString()
+          }))
+        ];
+        setRecentActivities(activities);
+
+        // Generate upcoming events from assessments
+        const events: Event[] = assessmentsResponse.data
+          .filter(a => new Date(a.date) > new Date())
+          .slice(0, 3)
+          .map(a => ({
+            title: a.title,
+            date: new Date(a.date).toISOString().split('T')[0],
+            type: a.type
+          }));
+        setUpcomingEvents(events);
+
+        setLoading(false);
       } catch (error) {
-        console.error('Error fetching stats:', error);
+        console.error('Error fetching dashboard data:', error);
+        setLoading(false);
       }
     };
 
-    fetchStats();
+    fetchDashboardData();
   }, []);
 
   const statCards = [
@@ -61,12 +123,20 @@ export default function AdminDashboard() {
     { title: 'Assessments', value: stats.totalAssessments, icon: ClipboardList, color: 'bg-pink-500', link: '/admin/assessments' }
   ];
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8 p-8 bg-gray-50">
       {/* Welcome Section */}
       <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-8 text-white">
         <h1 className="text-3xl font-bold mb-2">Welcome back, Admin!</h1>
-        <p className="opacity-90">Here's what's happening in your school today.</p>
+        <p className="opacity-90">Here&apos;s what&apos;s happening in your school today.</p>
       </div>
 
       {/* Stats Grid */}
@@ -135,9 +205,11 @@ export default function AdminDashboard() {
               </div>
             ))}
           </div>
-          <button className="mt-4 w-full py-2 bg-gray-50 text-gray-600 rounded-lg hover:bg-gray-100 transition duration-300">
-            View All Events
-          </button>
+          <Link href="/admin/calendar">
+            <button className="mt-4 w-full py-2 bg-gray-50 text-gray-600 rounded-lg hover:bg-gray-100 transition duration-300">
+              View All Events
+            </button>
+          </Link>
         </div>
       </div>
 

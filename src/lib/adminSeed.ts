@@ -1,10 +1,10 @@
 import bcrypt from 'bcryptjs';
 import User from '@/models/userModel';
-import { connect } from './db';
+import { connectDB } from './db';
 
 export async function seedAdminUser() {
     try {
-        await connect();
+        await connectDB();
 
         // Check if admin already exists
         const existingAdmin = await User.findOne({ username: 'f2022065004' });

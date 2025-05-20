@@ -20,7 +20,7 @@ export default function HomePage() {
           <p className="text-white mt-4 max-w-xl text-sm">
             Dynamically target high-payoff intellectual capital for customized technologies. Objectively integrate emerging core competencies before process-centric communities.
           </p>
-          <div className="flex gap-96 mt-24" w-ml >
+          <div className="flex gap-96 mt-24">
           <Link href="/auth/login">
               <button className="bg-cyan-500 hover:bg-cyan-600 text-white px-10 py-4 rounded-full text-sm font-semibold">
                 Sign up now
