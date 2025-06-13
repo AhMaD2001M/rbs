@@ -9,24 +9,37 @@ interface UserPayload {
     username: string;
 }
 
-const secretKey = process.env.JWT_SECRET;
-if (!secretKey) {
-    throw new Error('JWT_SECRET is not defined');
-}
+const secret = new TextEncoder().encode(
+    process.env.JWT_SECRET || 'your-secret-key'
+);
 
-const key = new TextEncoder().encode(secretKey);
-
-export async function encrypt(payload: UserPayload): Promise<string> {
+export async function encrypt(payload: UserPayload) {
     return await new SignJWT(payload)
         .setProtectedHeader({ alg: 'HS256' })
         .setIssuedAt()
         .setExpirationTime('24h')
-        .sign(key);
+        .sign(secret);
 }
 
-export async function decrypt(token: string): Promise<UserPayload> {
-    const { payload } = await jwtVerify(token, key);
-    return payload as UserPayload;
+export async function verifyAuth(token: string) {
+    try {
+        const { payload } = await jwtVerify(token, secret);
+        return payload;
+    } catch (error) {
+        return null;
+    }
+}
+
+export async function getSession() {
+    const token = cookies().get('token')?.value;
+    if (!token) return null;
+    
+    try {
+        const payload = await verifyAuth(token);
+        return payload as UserPayload;
+    } catch (error) {
+        return null;
+    }
 }
 
 export async function login(data: { token: string; user: UserPayload }) {
@@ -51,32 +64,18 @@ export async function login(data: { token: string; user: UserPayload }) {
 }
 
 export async function logout() {
-    // Create a response to clear the cookies
     const response = NextResponse.json({
-        message: 'Logout successful',
+        message: 'Logout successful'
     });
 
     // Clear the token cookie
-    response.cookies.delete('token');
+    response.cookies.set({
+        name: 'token',
+        value: '',
+        httpOnly: true,
+        path: '/',
+        expires: new Date(0),
+    });
 
     return response;
-}
-
-export async function getSession(): Promise<UserPayload | null> {
-    const token = cookies().get('token')?.value;
-    if (!token) return null;
-    try {
-        return await decrypt(token);
-    } catch {
-        return null;
-    }
-}
-
-export async function verifyAuth(token: string): Promise<UserPayload | null> {
-    try {
-        const verified = await decrypt(token);
-        return verified;
-    } catch {
-        return null;
-    }
 } 

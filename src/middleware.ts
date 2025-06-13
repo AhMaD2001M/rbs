@@ -19,12 +19,13 @@ export async function middleware(request: NextRequest) {
     try {
         // Verify authentication token
         const token = request.cookies.get('token')?.value
-        const verifiedToken = token && (await verifyAuth(token))
+        const verifiedToken = token && (await verifyAuth(token)) as DecodedToken
 
         if (isPublicPath && verifiedToken) {
             // If user is authenticated and tries to access public path,
-            // redirect to dashboard
-            return NextResponse.redirect(new URL('/admin/dashboard', request.url))
+            // redirect to appropriate dashboard based on role
+            const dashboardPath = `/${verifiedToken.role}/dashboard`
+            return NextResponse.redirect(new URL(dashboardPath, request.url))
         }
 
         if (!isPublicPath && !verifiedToken) {
@@ -39,6 +40,22 @@ export async function middleware(request: NextRequest) {
                 { error: 'Authentication required' },
                 { status: 401 }
             )
+        }
+
+        // Check role-based access for protected routes
+        if (verifiedToken) {
+            const role = verifiedToken.role
+            const pathPrefix = path.split('/')[1] // Get the first part of the path
+
+            // If trying to access a role-specific route
+            if (['admin', 'teacher', 'student'].includes(pathPrefix)) {
+                // Check if user has access to this role's routes
+                if (pathPrefix !== role) {
+                    // Redirect to appropriate dashboard
+                    const dashboardPath = `/${role}/dashboard`
+                    return NextResponse.redirect(new URL(dashboardPath, request.url))
+                }
+            }
         }
 
         return NextResponse.next()
@@ -57,10 +74,10 @@ export async function middleware(request: NextRequest) {
 // Configure which routes to run middleware on
 export const config = {
     matcher: [
-        '/admin/:path*',
-        '/api/admin/:path*',
-        '/login',
-        '/register'
+       // '/admin/:path*',
+       // '/api/admin/:path*',
+       // '/login',
+      //  '/register'
     ],
 } 
 

@@ -1,16 +1,29 @@
 'use client'
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
+import Link from 'next/link';
+import { ChevronLeft } from 'lucide-react';
+
+interface Class {
+  _id: string;
+  name: string;
+  grade: string;
+  section: string;
+}
 
 export default function AddStudent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const classId = searchParams.get('classId');
+  
   const [loading, setLoading] = useState(false);
+  const [classes, setClasses] = useState<Class[]>([]);
   const [formData, setFormData] = useState({
+    username: '',
     email: '',
     password: '',
-    studentId: '',
     firstName: '',
     lastName: '',
     dateOfBirth: '',
@@ -20,7 +33,22 @@ export default function AddStudent() {
     emergencyContact: '',
     grade: '',
     section: '',
+    classId: classId || ''
   });
+
+  useEffect(() => {
+    const fetchClasses = async () => {
+      try {
+        const response = await axios.get('/api/admin/classes');
+        setClasses(response.data);
+      } catch (error) {
+        console.error('Error fetching classes:', error);
+        toast.error('Failed to load classes');
+      }
+    };
+
+    fetchClasses();
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -35,7 +63,7 @@ export default function AddStudent() {
     setLoading(true);
 
     try {
-      const { firstName, lastName, dateOfBirth, gender, address, phoneNumber, emergencyContact, grade, section, ...rest } = formData;
+      const { firstName, lastName, dateOfBirth, gender, address, phoneNumber, emergencyContact, grade, section, classId, ...rest } = formData;
       
       const response = await axios.post('/api/auth/register', {
         ...rest,
@@ -50,61 +78,55 @@ export default function AddStudent() {
           emergencyContact,
           grade,
           section
-        }
+        },
+        classId
       });
 
       if (response.status === 201) {
         toast.success('Student added successfully');
-        router.push('/admin/dashboard');
+        if (classId) {
+          router.push(`/admin/classes/${classId}`);
+        } else {
+          router.push('/admin/students');
+        }
       }
-    } catch (error) {
-      if (axios.isAxiosError(error)) {
-        toast.error(error.response?.data?.message || 'Failed to add student');
-      } else {
-        toast.error('Failed to add student');
-      }
+    } catch (error: any) {
+      console.error('Error adding student:', error);
+      toast.error(error.response?.data?.message || 'Failed to add student');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="max-w-2xl mx-auto p-6">
-      <h1 className="text-2xl font-bold text-gray-800 mb-6">Add New Student</h1>
-      
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Personal Information */}
-          <div className="space-y-4">
-            <h2 className="text-lg font-semibold text-gray-700">Personal Information</h2>
-            
-            <div>
-              <label htmlFor="firstName" className="block text-sm font-medium text-gray-700">
-                First Name
-              </label>
-              <input
-                type="text"
-                id="firstName"
-                name="firstName"
-                required
-                value={formData.firstName}
-                onChange={handleChange}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              />
-            </div>
+    <div className="space-y-6 p-8">
+      <div className="flex items-center space-x-4">
+        <Link 
+          href={classId ? `/admin/classes/${classId}` : '/admin/students'}
+          className="flex items-center text-gray-600 hover:text-gray-900"
+        >
+          <ChevronLeft className="h-5 w-5" />
+          <span>Back</span>
+        </Link>
+        <h1 className="text-2xl font-bold text-gray-800">Add New Student</h1>
+      </div>
 
+      <form onSubmit={handleSubmit} className="max-w-3xl space-y-6">
+        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 space-y-6">
+          {/* Basic Information */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label htmlFor="lastName" className="block text-sm font-medium text-gray-700">
-                Last Name
+              <label htmlFor="username" className="block text-sm font-medium text-gray-700">
+                Username
               </label>
               <input
                 type="text"
-                id="lastName"
-                name="lastName"
-                required
-                value={formData.lastName}
+                id="username"
+                name="username"
+                value={formData.username}
                 onChange={handleChange}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                required
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
               />
             </div>
 
@@ -116,10 +138,10 @@ export default function AddStudent() {
                 type="email"
                 id="email"
                 name="email"
-                required
                 value={formData.email}
                 onChange={handleChange}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                required
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
               />
             </div>
 
@@ -131,10 +153,63 @@ export default function AddStudent() {
                 type="password"
                 id="password"
                 name="password"
-                required
                 value={formData.password}
                 onChange={handleChange}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                required
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="classId" className="block text-sm font-medium text-gray-700">
+                Class
+              </label>
+              <select
+                id="classId"
+                name="classId"
+                value={formData.classId}
+                onChange={handleChange}
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              >
+                <option value="">Select a class</option>
+                {classes.map(cls => (
+                  <option key={cls._id} value={cls._id}>
+                    {cls.name} - Grade {cls.grade} Section {cls.section}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Personal Information */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label htmlFor="firstName" className="block text-sm font-medium text-gray-700">
+                First Name
+              </label>
+              <input
+                type="text"
+                id="firstName"
+                name="firstName"
+                value={formData.firstName}
+                onChange={handleChange}
+                required
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="lastName" className="block text-sm font-medium text-gray-700">
+                Last Name
+              </label>
+              <input
+                type="text"
+                id="lastName"
+                name="lastName"
+                value={formData.lastName}
+                onChange={handleChange}
+                required
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
               />
             </div>
 
@@ -146,10 +221,10 @@ export default function AddStudent() {
                 type="date"
                 id="dateOfBirth"
                 name="dateOfBirth"
-                required
                 value={formData.dateOfBirth}
                 onChange={handleChange}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                required
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
               />
             </div>
 
@@ -160,86 +235,16 @@ export default function AddStudent() {
               <select
                 id="gender"
                 name="gender"
-                required
                 value={formData.gender}
                 onChange={handleChange}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                required
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
               >
-                <option value="">Select Gender</option>
+                <option value="">Select gender</option>
                 <option value="male">Male</option>
                 <option value="female">Female</option>
                 <option value="other">Other</option>
               </select>
-            </div>
-          </div>
-
-          {/* Academic Information */}
-          <div className="space-y-4">
-            <h2 className="text-lg font-semibold text-gray-700">Academic Information</h2>
-            
-            <div>
-              <label htmlFor="studentId" className="block text-sm font-medium text-gray-700">
-                Student ID
-              </label>
-              <input
-                type="text"
-                id="studentId"
-                name="studentId"
-                required
-                value={formData.studentId}
-                onChange={handleChange}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="grade" className="block text-sm font-medium text-gray-700">
-                Grade
-              </label>
-              <input
-                type="text"
-                id="grade"
-                name="grade"
-                required
-                value={formData.grade}
-                onChange={handleChange}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="section" className="block text-sm font-medium text-gray-700">
-                Section
-              </label>
-              <input
-                type="text"
-                id="section"
-                name="section"
-                required
-                value={formData.section}
-                onChange={handleChange}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              />
-            </div>
-          </div>
-
-          {/* Contact Information */}
-          <div className="space-y-4">
-            <h2 className="text-lg font-semibold text-gray-700">Contact Information</h2>
-            
-            <div>
-              <label htmlFor="address" className="block text-sm font-medium text-gray-700">
-                Address
-              </label>
-              <input
-                type="text"
-                id="address"
-                name="address"
-                required
-                value={formData.address}
-                onChange={handleChange}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              />
             </div>
 
             <div>
@@ -250,10 +255,10 @@ export default function AddStudent() {
                 type="tel"
                 id="phoneNumber"
                 name="phoneNumber"
-                required
                 value={formData.phoneNumber}
                 onChange={handleChange}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                required
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
               />
             </div>
 
@@ -262,30 +267,38 @@ export default function AddStudent() {
                 Emergency Contact
               </label>
               <input
-                type="text"
+                type="tel"
                 id="emergencyContact"
                 name="emergencyContact"
-                required
                 value={formData.emergencyContact}
                 onChange={handleChange}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                required
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              />
+            </div>
+
+            <div className="md:col-span-2">
+              <label htmlFor="address" className="block text-sm font-medium text-gray-700">
+                Address
+              </label>
+              <input
+                type="text"
+                id="address"
+                name="address"
+                value={formData.address}
+                onChange={handleChange}
+                required
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
               />
             </div>
           </div>
         </div>
 
-        <div className="flex justify-end space-x-4">
-          <button
-            type="button"
-            onClick={() => router.push('/admin/dashboard')}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-          >
-            Cancel
-          </button>
+        <div className="flex justify-end">
           <button
             type="submit"
             disabled={loading}
-            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+            className="inline-flex justify-center rounded-md border border-transparent bg-blue-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50"
           >
             {loading ? 'Adding...' : 'Add Student'}
           </button>
@@ -293,4 +306,5 @@ export default function AddStudent() {
       </form>
     </div>
   );
+} 
 } 

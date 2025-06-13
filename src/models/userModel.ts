@@ -25,10 +25,36 @@ const userSchema = new mongoose.Schema({
         type: Boolean,
         default: false,
     },
+    profile: {
+        firstName: String,
+        lastName: String,
+        dateOfBirth: Date,
+        gender: String,
+        address: String,
+        phoneNumber: String,
+        emergencyContact: String,
+        grade: String,
+        section: String,
+        subject: String, // For teachers
+    },
+    classes: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'classes'
+    }],
     createdAt: {
         type: Date,
         default: Date.now,
+    },
+    updatedAt: {
+        type: Date,
+        default: Date.now,
     }
+});
+
+// Update the updatedAt timestamp before saving
+userSchema.pre('save', function(next) {
+    this.updatedAt = new Date();
+    next();
 });
 
 // Check if the model is already defined to prevent overwriting

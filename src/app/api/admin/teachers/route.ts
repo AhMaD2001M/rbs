@@ -1,11 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import User from '@/models/userModel';
 import { connectDB } from '@/lib/db';
+import { getSession } from '@/lib/auth';
 import bcrypt from 'bcryptjs';
 
 // GET all teachers
 export async function GET() {
     try {
+        const session = await getSession();
+        if (!session?.email || session.role !== 'admin') {
+            return NextResponse.json(
+                { message: 'Unauthorized' },
+                { status: 401 }
+            );
+        }
+
         await connectDB();
         const teachers = await User.find({ role: 'teacher' })
             .select('-password')
@@ -15,7 +24,7 @@ export async function GET() {
     } catch (error) {
         console.error('Error fetching teachers:', error);
         return NextResponse.json(
-            { error: 'Error fetching teachers' },
+            { message: 'Error fetching teachers' },
             { status: 500 }
         );
     }
@@ -24,6 +33,14 @@ export async function GET() {
 // POST create new teacher
 export async function POST(req: Request) {
     try {
+        const session = await getSession();
+        if (!session?.email || session.role !== 'admin') {
+            return NextResponse.json(
+                { message: 'Unauthorized' },
+                { status: 401 }
+            );
+        }
+
         const {
             username,
             email,
@@ -85,6 +102,14 @@ export async function POST(req: Request) {
 // PUT update teacher
 export async function PUT(req: NextRequest) {
     try {
+        const session = await getSession();
+        if (!session?.email || session.role !== 'admin') {
+            return NextResponse.json(
+                { message: 'Unauthorized' },
+                { status: 401 }
+            );
+        }
+
         await connectDB();
         const body = await req.json();
         const { id, ...updateData } = body;
@@ -100,7 +125,7 @@ export async function PUT(req: NextRequest) {
 
         if (!updatedTeacher) {
             return NextResponse.json(
-                { error: 'Teacher not found' },
+                { message: 'Teacher not found' },
                 { status: 404 }
             );
         }
@@ -109,7 +134,7 @@ export async function PUT(req: NextRequest) {
     } catch (error) {
         console.error('Error updating teacher:', error);
         return NextResponse.json(
-            { error: 'Error updating teacher' },
+            { message: 'Error updating teacher' },
             { status: 500 }
         );
     }
@@ -118,13 +143,21 @@ export async function PUT(req: NextRequest) {
 // DELETE teacher
 export async function DELETE(req: NextRequest) {
     try {
+        const session = await getSession();
+        if (!session?.email || session.role !== 'admin') {
+            return NextResponse.json(
+                { message: 'Unauthorized' },
+                { status: 401 }
+            );
+        }
+
         await connectDB();
         const { searchParams } = new URL(req.url);
         const id = searchParams.get('id');
 
         if (!id) {
             return NextResponse.json(
-                { error: 'Teacher ID is required' },
+                { message: 'Teacher ID is required' },
                 { status: 400 }
             );
         }
@@ -136,7 +169,7 @@ export async function DELETE(req: NextRequest) {
 
         if (!deletedTeacher) {
             return NextResponse.json(
-                { error: 'Teacher not found' },
+                { message: 'Teacher not found' },
                 { status: 404 }
             );
         }
@@ -145,7 +178,7 @@ export async function DELETE(req: NextRequest) {
     } catch (error) {
         console.error('Error deleting teacher:', error);
         return NextResponse.json(
-            { error: 'Error deleting teacher' },
+            { message: 'Error deleting teacher' },
             { status: 500 }
         );
     }

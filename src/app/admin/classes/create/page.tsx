@@ -1,9 +1,10 @@
 'use client'
 import { useState, useEffect } from 'react';
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ChevronLeft } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 interface Teacher {
   _id: string;
@@ -24,11 +25,14 @@ interface ClassFormData {
   }>;
 }
 
+interface ApiError {
+  message: string;
+}
+
 export default function CreateClassPage() {
   const router = useRouter();
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
   const [formData, setFormData] = useState<ClassFormData>({
     name: '',
     grade: '',
@@ -46,7 +50,8 @@ export default function CreateClassPage() {
         setTeachers(response.data);
       } catch (error) {
         console.error('Error fetching teachers:', error);
-        setError('Failed to load teachers');
+        const axiosError = error as AxiosError<ApiError>;
+        toast.error(axiosError.response?.data?.message || 'Failed to load teachers');
       }
     };
 
@@ -56,14 +61,15 @@ export default function CreateClassPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError('');
 
     try {
       await axios.post('/api/admin/classes', formData);
+      toast.success('Class created successfully');
       router.push('/admin/classes');
     } catch (error) {
       console.error('Error creating class:', error);
-      setError('Failed to create class');
+      const axiosError = error as AxiosError<ApiError>;
+      toast.error(axiosError.response?.data?.message || 'Failed to create class');
     } finally {
       setLoading(false);
     }
@@ -119,12 +125,6 @@ export default function CreateClassPage() {
       </div>
 
       <form onSubmit={handleSubmit} className="max-w-3xl space-y-6">
-        {error && (
-          <div className="bg-red-50 text-red-500 p-4 rounded-lg">
-            {error}
-          </div>
-        )}
-
         <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 space-y-6">
           {/* Basic Information */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -254,51 +254,46 @@ export default function CreateClassPage() {
                   />
                 </div>
 
-                <div className="flex items-center gap-4">
-                  <div className="flex-1">
-                    <label className="block text-sm font-medium text-gray-700">
-                      Subject Teacher
-                    </label>
-                    <select
-                      value={subject.teacher}
-                      onChange={(e) => handleSubjectChange(index, 'teacher', e.target.value)}
-                      required
-                      className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    >
-                      <option value="">Select a teacher</option>
-                      {teachers.map(teacher => (
-                        <option key={teacher._id} value={teacher._id}>
-                          {teacher.username}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  {index > 0 && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Subject Teacher
+                  </label>
+                  <select
+                    value={subject.teacher}
+                    onChange={(e) => handleSubjectChange(index, 'teacher', e.target.value)}
+                    required
+                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  >
+                    <option value="">Select a teacher</option>
+                    {teachers.map(teacher => (
+                      <option key={teacher._id} value={teacher._id}>
+                        {teacher.username} ({teacher.email})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {index > 0 && (
+                  <div className="col-span-2 flex justify-end">
                     <button
                       type="button"
                       onClick={() => removeSubject(index)}
-                      className="mt-6 text-red-500 hover:text-red-600"
+                      className="text-red-500 hover:text-red-600 text-sm"
                     >
-                      Remove
+                      Remove Subject
                     </button>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
             ))}
           </div>
         </div>
 
-        <div className="flex justify-end space-x-4">
-          <Link
-            href="/admin/classes"
-            className="px-4 py-2 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition"
-          >
-            Cancel
-          </Link>
+        <div className="flex justify-end">
           <button
             type="submit"
             disabled={loading}
-            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition disabled:opacity-50"
+            className="inline-flex justify-center rounded-md border border-transparent bg-blue-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50"
           >
             {loading ? 'Creating...' : 'Create Class'}
           </button>

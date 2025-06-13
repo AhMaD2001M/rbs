@@ -1,10 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Class from '@/models/classModel';
 import { connectDB } from '@/lib/db';
+import { getSession } from '@/lib/auth';
 
 // GET all classes
 export async function GET(req: NextRequest) {
     try {
+        const session = await getSession();
+        if (!session?.email || session.role !== 'admin') {
+            return NextResponse.json(
+                { message: 'Unauthorized' },
+                { status: 401 }
+            );
+        }
+
         await connectDB();
         const classes = await Class.find()
             .populate('classTeacher', 'username email')
@@ -24,6 +33,14 @@ export async function GET(req: NextRequest) {
 // POST create new class
 export async function POST(req: NextRequest) {
     try {
+        const session = await getSession();
+        if (!session?.email || session.role !== 'admin') {
+            return NextResponse.json(
+                { message: 'Unauthorized' },
+                { status: 401 }
+            );
+        }
+
         await connectDB();
         const body = await req.json();
 
@@ -43,6 +60,14 @@ export async function POST(req: NextRequest) {
 // PUT update class
 export async function PUT(req: NextRequest) {
     try {
+        const session = await getSession();
+        if (!session?.email || session.role !== 'admin') {
+            return NextResponse.json(
+                { message: 'Unauthorized' },
+                { status: 401 }
+            );
+        }
+
         await connectDB();
         const body = await req.json();
         const { id, ...updateData } = body;
@@ -73,6 +98,14 @@ export async function PUT(req: NextRequest) {
 // DELETE class
 export async function DELETE(req: NextRequest) {
     try {
+        const session = await getSession();
+        if (!session?.email || session.role !== 'admin') {
+            return NextResponse.json(
+                { message: 'Unauthorized' },
+                { status: 401 }
+            );
+        }
+
         await connectDB();
         const { searchParams } = new URL(req.url);
         const id = searchParams.get('id');
