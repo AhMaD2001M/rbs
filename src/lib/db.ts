@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import User from '../models/userModel';
 
 // Add debug logging
 console.log('Available environment variables:', {
@@ -95,4 +96,16 @@ export async function connectDB() {
         console.error('Failed to connect to MongoDB:', error);
         throw error;
     }
+}
+
+export async function getUserById(userId: string, role: string) {
+    await connectDB();
+    const user = await User.findOne({ _id: userId, role }).lean();
+    if (!user) return null;
+    return {
+        id: user._id.toString(),
+        email: user.email,
+        role: user.role,
+        username: user.username,
+    };
 }

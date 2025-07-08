@@ -4,7 +4,7 @@ import { connectDB } from '@/lib/db';
 import { getSession } from '@/lib/auth';
 import bcrypt from 'bcryptjs';
 
-// GET all teachers
+
 export async function GET() {
     try {
         const session = await getSession();
@@ -34,6 +34,7 @@ export async function GET() {
 export async function POST(req: Request) {
     try {
         const session = await getSession();
+        console.log('Session in POST /api/admin/teachers:', session);
         if (!session?.email || session.role !== 'admin') {
             return NextResponse.json(
                 { message: 'Unauthorized' },
@@ -182,4 +183,4 @@ export async function DELETE(req: NextRequest) {
             { status: 500 }
         );
     }
-} 
+}

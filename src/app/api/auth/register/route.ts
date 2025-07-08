@@ -3,6 +3,7 @@ import { connectDB } from '@/lib/db';
 import User from '@/models/userModel';
 import bcrypt from 'bcryptjs';
 import { getSession } from '@/lib/auth';
+import Enrollment from '@/models/enrollmentModel';
 
 export async function POST(req: NextRequest) {
     try {
@@ -62,12 +63,24 @@ export async function POST(req: NextRequest) {
 
         await newUser.save();
 
-        // If classId is provided, add student to the class
+        // If classId is provided, add student to the class and create enrollment
         if (classId && role === 'student') {
             const Class = (await import('@/models/classModel')).default;
             await Class.findByIdAndUpdate(
                 classId,
                 { $addToSet: { students: newUser._id } }
+            );
+            
+            // Create enrollment document for student dashboard
+            await Enrollment.findOneAndUpdate(
+                { student: newUser._id, class: classId },
+                { 
+                    student: newUser._id, 
+                    class: classId, 
+                    enrolledBy: session.id, 
+                    status: 'active' 
+                },
+                { upsert: true, new: true }
             );
         }
 

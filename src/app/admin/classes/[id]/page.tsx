@@ -10,7 +10,8 @@ import {
   Calendar,
   UserCircle,
   ChevronLeft,
-  PlusCircle
+  PlusCircle,
+  X
 } from 'lucide-react';
 
 interface Student {
@@ -56,11 +57,25 @@ interface Class {
   active: boolean;
 }
 
+interface AvailableStudent {
+  _id: string;
+  username: string;
+  email: string;
+  profile: {
+    firstName: string;
+    lastName: string;
+  };
+}
+
 export default function ClassDetailPage() {
   const params = useParams();
   const [classData, setClassData] = useState<Class | null>(null);
   const [assessments, setAssessments] = useState<Assessment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showEnrollModal, setShowEnrollModal] = useState(false);
+  const [availableStudents, setAvailableStudents] = useState<AvailableStudent[]>([]);
+  const [selectedStudentId, setSelectedStudentId] = useState('');
+  const [enrolling, setEnrolling] = useState(false);
 
   useEffect(() => {
     const fetchClassData = async () => {
@@ -83,6 +98,45 @@ export default function ClassDetailPage() {
       fetchClassData();
     }
   }, [params.id]);
+
+  const fetchAvailableStudents = async () => {
+    try {
+      const response = await axios.get('/api/admin/students');
+      // Filter out students already enrolled in this class
+      const enrolledStudentIds = classData?.students.map(s => s._id) || [];
+      const available = response.data.filter((student: AvailableStudent) => 
+        !enrolledStudentIds.includes(student._id)
+      );
+      setAvailableStudents(available);
+    } catch (error) {
+      console.error('Error fetching available students:', error);
+    }
+  };
+
+  const handleEnrollStudent = async () => {
+    if (!selectedStudentId) return;
+    
+    setEnrolling(true);
+    try {
+      await axios.patch('/api/admin/classes', {
+        classId: params.id,
+        studentId: selectedStudentId
+      });
+      
+      // Refresh class data
+      const classResponse = await axios.get(`/api/admin/classes/${params.id}`);
+      setClassData(classResponse.data);
+      
+      // Close modal and reset
+      setShowEnrollModal(false);
+      setSelectedStudentId('');
+      setAvailableStudents([]);
+    } catch (error) {
+      console.error('Error enrolling student:', error);
+    } finally {
+      setEnrolling(false);
+    }
+  };
 
   if (loading || !classData) {
     return (
@@ -216,15 +270,26 @@ export default function ClassDetailPage() {
         <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold text-gray-800">Students</h2>
-            <Link
-              href={`/admin/students/add?classId=${params.id}`}
-              className="text-blue-500 hover:text-blue-600 text-sm"
-            >
-              Add Student
-            </Link>
+            <div className="flex space-x-2">
+              <button
+                onClick={() => {
+                  setShowEnrollModal(true);
+                  fetchAvailableStudents();
+                }}
+                className="text-blue-500 hover:text-blue-600 text-sm"
+              >
+                Enroll Student
+              </button>
+              <Link
+                href={`/admin/students/add?classId=${params.id}`}
+                className="text-blue-500 hover:text-blue-600 text-sm"
+              >
+                Add New
+              </Link>
+            </div>
           </div>
           <div className="space-y-4">
-            {classData.students.map((student) => (
+            {classData?.students.map((student) => (
               <Link
                 key={student._id}
                 href={`/admin/students/${student._id}`}
@@ -244,6 +309,59 @@ export default function ClassDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Enroll Student Modal */}
+      {showEnrollModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">Enroll Student</h3>
+              <button
+                onClick={() => setShowEnrollModal(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Select Student
+                </label>
+                <select
+                  value={selectedStudentId}
+                  onChange={(e) => setSelectedStudentId(e.target.value)}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2"
+                >
+                  <option value="">Choose a student...</option>
+                  {availableStudents.map((student) => (
+                    <option key={student._id} value={student._id}>
+                      {student.profile.firstName} {student.profile.lastName} ({student.email})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              
+              <div className="flex justify-end space-x-3">
+                <button
+                  onClick={() => setShowEnrollModal(false)}
+                  className="px-4 py-2 text-gray-600 hover:text-gray-800"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleEnrollStudent}
+                  disabled={!selectedStudentId || enrolling}
+                  className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50"
+                >
+                  {enrolling ? 'Enrolling...' : 'Enroll'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 } 

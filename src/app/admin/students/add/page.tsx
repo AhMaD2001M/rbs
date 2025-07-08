@@ -90,9 +90,13 @@ export default function AddStudent() {
           router.push('/admin/students');
         }
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error adding student:', error);
-      toast.error(error.response?.data?.message || 'Failed to add student');
+      if (typeof error === 'object' && error && 'response' in error) {
+        toast.error((error as { response?: { data?: { message?: string } } }).response?.data?.message || 'Failed to add student');
+      } else {
+        toast.error('Failed to add student');
+      }
     } finally {
       setLoading(false);
     }
@@ -306,5 +310,4 @@ export default function AddStudent() {
       </form>
     </div>
   );
-} 
 } 

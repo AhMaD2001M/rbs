@@ -65,9 +65,26 @@ export default function ClassForm({ initialData, isEditing, classId }: ClassForm
                     id: classId,
                     ...formData
                 });
+                
+                // If classTeacher changed, enroll the new teacher
+                if (formData.classTeacher) {
+                    await axios.patch('/api/admin/classes', {
+                        classId: classId,
+                        teacherId: formData.classTeacher
+                    });
+                }
             } else {
                 // Create new class
-                await axios.post('/api/admin/classes', formData);
+                const response = await axios.post('/api/admin/classes', formData);
+                const newClassId = response.data._id;
+                
+                // Enroll the teacher in the new class
+                if (formData.classTeacher) {
+                    await axios.patch('/api/admin/classes', {
+                        classId: newClassId,
+                        teacherId: formData.classTeacher
+                    });
+                }
             }
 
             router.push('/admin/classes');

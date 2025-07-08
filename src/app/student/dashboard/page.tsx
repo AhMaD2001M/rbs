@@ -30,18 +30,6 @@ interface Class {
   };
 }
 
-interface Result {
-  _id: string;
-  assessment: {
-    title: string;
-    type: string;
-  };
-  obtainedMarks: number;
-  totalMarks: number;
-  grade: string;
-  status: string;
-}
-
 export default function StudentDashboard() {
   const [stats, setStats] = useState<StudentStats>({
     totalClasses: 0,
@@ -51,7 +39,6 @@ export default function StudentDashboard() {
   });
 
   const [classes, setClasses] = useState<Class[]>([]);
-  const [results, setResults] = useState<Result[]>([]);
 
   const [recentActivities] = useState([
     { type: 'Assignment', message: 'New Math homework due tomorrow', time: '1 hour ago' },
@@ -69,15 +56,13 @@ export default function StudentDashboard() {
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        const [statsResponse, classesResponse, resultsResponse] = await Promise.all([
+        const [statsResponse, classesResponse] = await Promise.all([
           axios.get('/api/student/stats'),
           axios.get('/api/student/classes'),
-          axios.get('/api/student/results'),
         ]);
 
         setStats(statsResponse.data);
         setClasses(classesResponse.data);
-        setResults(resultsResponse.data);
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
       }
@@ -93,8 +78,33 @@ export default function StudentDashboard() {
     { title: 'Assessments', value: stats.totalAssessments, icon: ClipboardList, color: 'bg-pink-500', link: '/student/assessments' }
   ];
 
+  const isImpersonating = typeof window !== 'undefined' && sessionStorage.getItem('admin_token');
+  const handleReturnToAdmin = () => {
+    const adminToken = sessionStorage.getItem('admin_token');
+    if (adminToken) {
+      document.cookie = `token=${adminToken}; path=/;`;
+      sessionStorage.removeItem('admin_token');
+      window.location.href = '/admin/dashboard';
+    }
+  };
+
+  const handleLogout = async () => {
+    await axios.post('/api/auth/logout');
+    sessionStorage.removeItem('admin_token');
+    window.location.href = '/login';
+  };
+
   return (
     <div className="space-y-8 p-8 bg-gray-50">
+      {isImpersonating && (
+        <div className="bg-yellow-200 text-yellow-900 p-4 rounded mb-4 flex justify-between items-center">
+          <span>You are impersonating a student. </span>
+          <button onClick={handleReturnToAdmin} className="bg-yellow-400 px-3 py-1 rounded font-semibold hover:bg-yellow-300">Return to Admin</button>
+        </div>
+      )}
+      <div className="flex justify-end mb-4">
+        <button onClick={handleLogout} className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">Logout</button>
+      </div>
       {/* Welcome Section */}
       <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-8 text-white">
         <h1 className="text-3xl font-bold mb-2">Welcome back, Student!</h1>
@@ -119,6 +129,28 @@ export default function StudentDashboard() {
             </Link>
           );
         })}
+      </div>
+
+      {/* Enrolled Classes Section */}
+      <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+        <h2 className="text-xl font-bold text-gray-800 mb-4">My Enrolled Classes</h2>
+        {classes.length === 0 ? (
+          <p className="text-gray-500">You are not enrolled in any classes.</p>
+        ) : (
+          <div className="space-y-4">
+            {classes.map(cls => (
+              <Link href={`/student/classes/${cls._id}`} key={cls._id}>
+                <div className="flex items-center justify-between p-4 rounded-lg hover:bg-gray-50 transition duration-150 cursor-pointer border border-gray-100">
+                  <div>
+                    <h3 className="font-medium text-gray-800">{cls.className} - Section {cls.section}</h3>
+                    <p className="text-sm text-gray-500">Teacher: {cls.teacher.firstName} {cls.teacher.lastName}</p>
+                  </div>
+                  <BookOpen className="h-5 w-5 text-blue-500" />
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

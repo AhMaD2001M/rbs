@@ -48,13 +48,21 @@ export async function POST(req: NextRequest) {
         // Create the student
         const newStudent = await User.create(body);
         
-        // If classId is provided, add student to the class
+        // If classId is provided, add student to the class and create enrollment
         if (body.classId) {
             const Class = (await import('@/models/classModel')).default;
             await Class.findByIdAndUpdate(
                 body.classId,
                 { $addToSet: { students: newStudent._id } }
             );
+            // Create enrollment
+            const Enrollment = (await import('@/models/enrollmentModel')).default;
+            await Enrollment.create({
+                student: newStudent._id,
+                class: body.classId,
+                enrolledBy: body.createdBy || newStudent._id, // fallback if not provided
+                status: 'active'
+            });
         }
         
         // Remove password from response
@@ -97,6 +105,7 @@ export async function PUT(req: NextRequest) {
         // Handle class assignment if provided
         if (classId) {
             const Class = (await import('@/models/classModel')).default;
+            const Enrollment = (await import('@/models/enrollmentModel')).default;
             // Remove from all classes first
             await Class.updateMany(
                 { students: id },
@@ -107,6 +116,18 @@ export async function PUT(req: NextRequest) {
                 classId,
                 { $addToSet: { students: id } }
             );
+            // Remove all previous active enrollments for this student
+            await Enrollment.updateMany(
+                { student: id, status: 'active' },
+                { $set: { status: 'dropped' } }
+            );
+            // Create new enrollment
+            await Enrollment.create({
+                student: id,
+                class: classId,
+                enrolledBy: body.updatedBy || id, // fallback if not provided
+                status: 'active'
+            });
         }
 
         return NextResponse.json(updatedStudent);

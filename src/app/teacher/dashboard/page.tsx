@@ -103,8 +103,33 @@ export default function TeacherDashboard() {
     );
   }
 
+  const isImpersonating = typeof window !== 'undefined' && sessionStorage.getItem('admin_token');
+  const handleReturnToAdmin = () => {
+    const adminToken = sessionStorage.getItem('admin_token');
+    if (adminToken) {
+      document.cookie = `token=${adminToken}; path=/;`;
+      sessionStorage.removeItem('admin_token');
+      window.location.href = '/admin/dashboard';
+    }
+  };
+
+  const handleLogout = async () => {
+    await axios.post('/api/auth/logout');
+    sessionStorage.removeItem('admin_token');
+    window.location.href = '/login';
+  };
+
   return (
     <div className="space-y-8 p-8 bg-gray-50">
+      {isImpersonating && (
+        <div className="bg-yellow-200 text-yellow-900 p-4 rounded mb-4 flex justify-between items-center">
+          <span>You are impersonating a teacher. </span>
+          <button onClick={handleReturnToAdmin} className="bg-yellow-400 px-3 py-1 rounded font-semibold hover:bg-yellow-300">Return to Admin</button>
+        </div>
+      )}
+      <div className="flex justify-end mb-4">
+        <button onClick={handleLogout} className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">Logout</button>
+      </div>
       {/* Welcome Section */}
       <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-8 text-white">
         <h1 className="text-3xl font-bold mb-2">
